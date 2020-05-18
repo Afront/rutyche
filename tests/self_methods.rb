@@ -27,28 +27,36 @@ end
 module TypeChecker
   @@tp_hash = {}
 
-  def self.add_type_checking(function, parameter_types = {}, return_type = :untyped)
-    @@tp_hash[function] = {
-      parameter_types: parameter_types,
-      return_type: return_type
+  def self.add_type_checking(collection, function, parameter_types = {}, return_type = :untyped)
+    singleton_class = collection.singleton_class
+    if  @@tp_hash[singleton_class].nil?
+      @@tp_hash[singleton_class] = Hash.new { 
+        |klass, function| klass[function] = {
+          parameters_types: Hash.new { |types, parameter| types[parameter] =  :untyped},
+          return_type: :untyped
+        }
+      }
+    end
+
+    @@tp_hash[singleton_class][function] = {
+        parameter_types: parameter_types,
+        return_type: return_type        
     }
-
-    @@tp_hash[function].default = {}
-
-    @@tp_hash[function][parameter_types].default = :untyped
   end
 
   TracePoint.trace(:call, :return) do |tp|
-    # TODO: Use tp.defined_class to add support for multiple classes
     # TODO: Check tp.method_id vs tp.callee_id
+    collection_name = tp.defined_class
     method_name = tp.method_id
+    next if method_name == :add_type_checking  || !@@tp_hash.has_key?(collection_name)
+
+    collection_hash = @@tp_hash[collection_name]
     type_error = nil
-    next if method_name == :add_type_checking || @@tp_hash[method_name].nil?
 
     case tp.event
     when :call
       tp.parameters.each_with_index do |parameter, i|
-        parameter_types = @@tp_hash[method_name][:parameter_types]
+        parameter_types = collection_hash[method_name][:parameter_types]
         expected_parameter_type = parameter_types[parameter_types.class == Hash ? parameter[1] : i]
         next if expected_parameter_type == :untyped
         argument = tp.binding.local_variable_get(parameter[1].to_s)
@@ -56,11 +64,11 @@ module TypeChecker
       end
     when :return
       return_value = tp.return_value
-      expected_return_type = @@tp_hash[method_name][:return_type]
-      next if @@tp_hash[tp.method_id][:return_type] == :untyped
+      expected_return_type = collection_hash[method_name][:return_type]
+      next if collection_hash[method_name][:return_type] == :untyped
 
-      if !return_value.is_a? @@tp_hash[tp.method_id][:return_type]
-        type_error = TypeError.new "Return value (#{return_value}) is not of class #{@@tp_hash[tp.method_id][:return_type]}" unless type_error
+      if !return_value.is_a? collection_hash[method_name][:return_type]
+        type_error = TypeError.new "Return value (#{return_value}) is not of class #{collection_hash[method_name][:return_type]}" unless type_error
       end
     end
 
@@ -73,9 +81,9 @@ module SelfMethods
     raise unless result
   end
 
-  def self.assert_error(container, method, *args)
+  def self.assert_error(collection, method, *args)
     begin
-     container.send(method, *args)
+     collection.send(method, *args)
     rescue TypeError
     else
      raise "Test failed!"
@@ -88,11 +96,12 @@ module SelfMethods
   assert TypedMethods.add_two_integers(a: 2, b: 5)
   assert TypedMethods.concatenate_all_strings('1', '2', '3')
 
-  TypeChecker.add_type_checking(:bye)
-  TypeChecker.add_type_checking(:wow, { a: Integer, b: Symbol }, Array)
-  TypeChecker.add_type_checking(:add_integers, { a: Integer, b: Integer }, Integer)
-  TypeChecker.add_type_checking(:add_two_integers, [Integer, Integer], Integer)
-  TypeChecker.add_type_checking(:concatenate_all_strings, [String, Array], String)
+  TypeChecker.add_type_checking(TypedMethods, :bye)
+  TypeChecker.add_type_checking(TypedMethods, :wow, { a: Integer, b: Symbol }, Array)
+  TypeChecker.add_type_checking(TypedMethods, :add_integers, { a: Integer, b: Integer }, Integer)
+  TypeChecker.add_type_checking(TypedMethods, :add_two_integers, [Integer, Integer], Integer)
+  TypeChecker.add_type_checking(TypedMethods, :concatenate_all_strings, [String, Array], String)
+
 
   assert TypedMethods.bye
   assert TypedMethods.wow(5, :a)

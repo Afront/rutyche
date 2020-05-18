@@ -1,28 +1,26 @@
 # frozen_string_literal: true
 
-require 'pp'
-
 module TypedMethods
   module_function
 
   def self.bye
-    p 'Bye!'
+    'Bye!'
   end
 
   def self.wow(a, b)
-    p a, b
+    [a, b]
   end
 
   def self.add_integers(a, b)
-    p a + b
+    a + b
   end
 
   def self.add_two_integers(a:, b:)
-    p a + b
+    a + b
   end
 
   def self.concatenate_all_strings(string, *args)
-    p string + args.join
+    string + args.join
   end
 end
 
@@ -45,7 +43,7 @@ module TypeChecker
     # TODO: Check tp.method_id vs tp.callee_id
     method_name = tp.method_id
     type_error = nil
-    next if method_name == :add_type_checking || @@tp_hash[method_name].nil? || @@tp_hash[method_name].empty?
+    next if method_name == :add_type_checking || @@tp_hash[method_name].nil?
 
     case tp.event
     when :call
@@ -59,7 +57,6 @@ module TypeChecker
     when :return
       return_value = tp.return_value
       expected_return_type = @@tp_hash[method_name][:return_type]
-      puts return_value, "hi"
       next if @@tp_hash[tp.method_id][:return_type] == :untyped
 
       if !return_value.is_a? @@tp_hash[tp.method_id][:return_type]
@@ -72,7 +69,6 @@ module TypeChecker
 end
 
 module SelfMethods
-  # extend TypedMethods
   def self.assert result
     raise unless result
   end
@@ -86,17 +82,22 @@ module SelfMethods
     end
   end
 
+  assert TypedMethods.bye
+  assert TypedMethods.wow(5, :a)
+  assert TypedMethods.add_integers(2, 5)
+  assert TypedMethods.add_two_integers(a: 2, b: 5)
+  assert TypedMethods.concatenate_all_strings('1', '2', '3')
+
   TypeChecker.add_type_checking(:bye)
   TypeChecker.add_type_checking(:wow, { a: Integer, b: Symbol }, Array)
   TypeChecker.add_type_checking(:add_integers, { a: Integer, b: Integer }, Integer)
   TypeChecker.add_type_checking(:add_two_integers, [Integer, Integer], Integer)
   TypeChecker.add_type_checking(:concatenate_all_strings, [String, Array], String)
 
-  # puts "hi"
   assert TypedMethods.bye
   assert TypedMethods.wow(5, :a)
   assert TypedMethods.add_integers(2, 5)
-  assert p TypedMethods.add_two_integers(a: 2, b: 5)
+  assert TypedMethods.add_two_integers(a: 2, b: 5)
   assert TypedMethods.concatenate_all_strings('1', '2', '3')
 
   assert_error(TypedMethods, :add_integers, "2", "5")

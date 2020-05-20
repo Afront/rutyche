@@ -23,6 +23,10 @@ module TypedMethods
   def self.concatenate_all_strings(string, *args)
     string + args.join
   end
+
+  def self.puts(string, *args)
+    Kernel.puts string, *args
+  end
 end
 
 module TypeChecker
@@ -33,7 +37,7 @@ module TypeChecker
     if  @@tp_hash[singleton_class].nil?
       @@tp_hash[singleton_class] = Hash.new { 
         |klass, function| klass[function] = {
-          parameters_types: Hash.new { |types, parameter| types[parameter] =  :untyped},
+          parameter_types: Hash.new { |types, parameter| types[parameter] =  :untyped},
           return_type: :untyped
         }
       }
@@ -51,8 +55,11 @@ module TypeChecker
     method_name = tp.method_id
     next if method_name == :add_type_checking  || !@@tp_hash.has_key?(collection_name)
 
+
     collection_hash = @@tp_hash[collection_name]
     type_error = nil
+
+    next if collection_hash[method_name][:parameter_types].empty?
 
     case tp.event
     when :call
@@ -78,7 +85,7 @@ module TypeChecker
 end
 
 module SelfMethods
-  def self.assert result
+  def self.assert result  
     raise unless result
   end
 
@@ -110,8 +117,10 @@ module SelfMethods
   assert TypedMethods.add_two_integers(a: 2, b: 5)
   assert TypedMethods.concatenate_all_strings('1', '2', '3')
 
-  assert_error(TypedMethods, :add_integers, "2", "5")
-  assert_error(TypedMethods, :add_integers, "2", 5)
+  assert_error(TypedMethods, :add_integers, '2', '5')
+  assert_error(TypedMethods, :add_integers, '2', 5)
   assert_error(TypedMethods, :add_integers, 2.3, 5.1)
   assert_error(TypedMethods, :add_integers, 2.3, 5)
+
+  assert TypedMethods.puts('Hi', 'how', 'are', 'you?').nil?
 end

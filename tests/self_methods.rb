@@ -94,7 +94,7 @@ module SelfMethods
      collection.send(method, *args)
     rescue TypeError
     else
-     raise "Test failed!"
+     raise 'Test failed!'
     end
   end
 

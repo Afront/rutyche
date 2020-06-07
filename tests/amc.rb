@@ -30,29 +30,44 @@ end
 
 
 class TypeChecker
+  attr_reader :calls
+
   @@untyped_types = Set[:untyped, :void] # insert other types
+  ArgumentReturn = Struct.new(:arguments, :return_value, :exception, keyword_init: true)
+  CallTrace = Struct.new(:method_name, :method_call, :block_calls , :block_given, keyword_init: true)
 
   def initialize env
     @env = env
+    @calls = []
   end
 
   def type_check_arguments(expected_parameter_types, args)
     return if expected_parameter_types.delete_if { |param_type| @@untyped_types.include? param_type}.empty?
     
     # Does not support :untyped yet
+    # args.each_with_index do |arg|
+    # end
+
+
     args.map { |arg| arg.class} == expected_parameter_types
   end
 
   def type_check_return_type(value, expected_return_type)
-    return if @@untyped_types.includes? expected_return_type
-    raise unless value.is_a? expected_return_type
+    return if @@untyped_types.include? expected_return_type
+#    raise TypeError unless value.is_a? expected_return_type
   end
 
   def type_check_method_body(actual_method, expected_parameter_types = [], expected_return_type = :untyped)
+    this = self
+
     lambda { |*args|
-      type_check_arguments(expected_parameter_types, args)
-      value = actual_method.call *args
-      type_check_return_type(value, expected_return_type)
+      this.type_check_arguments(expected_parameter_types, args)
+      value = send(actual_method, *args)
+      this.type_check_return_type(value, expected_return_type)
+
+      this.calls << ArgumentReturn.new(arguments: args, return_value: value, exception: nil)
+
+
       value
     }
   end
@@ -63,11 +78,12 @@ class TypeChecker
     type_checked_method = method_name + '_with_type_check'
     original_method = method_name + '_without_type_check'
     
+    typed_proc = type_check_method_body(original_method, expected_parameter_types, expected_return_type)
     class_name.instance_eval do
-      define_method(type_checked_method, type_check_method_body(, expected_parameter_types, expected_return_type))
+      define_method(type_checked_method, typed_proc)
     
-      alias_method original_method, method_symbol
-      alias_method method_symbol, type_checked_method
+      # alias_method original_method, method_symbol
+      # alias_method method_symbol, type_checked_method
 
       alias_method_chain method_symbol, :type_check
     end
@@ -92,8 +108,21 @@ module SelfMethods
 
   env = RBS::Environment.new()
   checker = TypeChecker.new(env)
-  checker.add_type_checking_to_instance_method(SomeClass, puts)
+  checker.add_type_checking_to_instance_method(SomeClass, :foo)
+  checker.add_type_checking_to_instance_method(SomeClass, :bar, [Integer, Integer], Integer)
 
+
+  some_object = SomeClass.new
+
+  some_object.foo
+  some_object.bar(1,2)
+
+  begin
+    some_object.bar(1,2.1)  
+  rescue Exception => e
+    
+  end
+  pp checker.calls
 
   # assert TypedMethods.bye
   # assert TypedMethods.wow(5, :a)
@@ -106,7 +135,6 @@ module SelfMethods
   # TypeChecker.add_type_checking(TypedMethods, :add_integers, { a: Integer, b: Integer }, Integer)
   # TypeChecker.add_type_checking(TypedMethods, :add_two_integers, [Integer, Integer], Integer)
   # TypeChecker.add_type_checking(TypedMethods, :concatenate_all_strings, [String, Array], String)
-
 
   # assert TypedMethods.bye
   # assert TypedMethods.wow(5, :a)

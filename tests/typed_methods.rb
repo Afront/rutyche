@@ -30,8 +30,12 @@ class SomeClass
   def initialize
   end
 
-  def puts
-    puts "hi"
+  def foo
+    puts 'foo'
+  end
+
+  def bar(foo, baz)
+    foo + baz
   end
 
 end

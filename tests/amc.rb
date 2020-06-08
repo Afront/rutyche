@@ -81,7 +81,7 @@ class TypeChecker
     typed_proc = type_check_method_body(original_method, expected_parameter_types, expected_return_type)
     class_name.instance_eval do
       define_method(type_checked_method, typed_proc)
-
+    
       alias_method_chain method_symbol, :type_check
     end
   end
@@ -117,8 +117,12 @@ module SelfMethods
   begin
     some_object.bar(1,2.1)  
   rescue Exception => e
-    
+  else
+    raise 'Should return error'    
   end
+
+
+
   pp checker.calls
 
   # assert TypedMethods.bye

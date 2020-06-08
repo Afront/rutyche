@@ -81,9 +81,6 @@ class TypeChecker
     typed_proc = type_check_method_body(original_method, expected_parameter_types, expected_return_type)
     class_name.instance_eval do
       define_method(type_checked_method, typed_proc)
-    
-      # alias_method original_method, method_symbol
-      # alias_method method_symbol, type_checked_method
 
       alias_method_chain method_symbol, :type_check
     end

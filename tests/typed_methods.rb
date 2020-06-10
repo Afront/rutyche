@@ -37,5 +37,48 @@ class SomeClass
   def bar(foo, baz)
     foo + baz
   end
-
 end
+
+class Stack
+  def initialize
+    @array = []
+  end
+
+  def push(*args)
+    @array.push args
+  end
+
+  def pop
+    @array.pop
+  end
+
+  # def each
+  #   each_index do |i|
+  #     yield get_value i
+  #   end
+  # end
+
+  # def each_index
+  #     i = 0
+  #     while i < @array.length
+  #       yield i
+  #       i += 1
+  #     end
+  # end
+
+  # def get_value idx
+  #   if idx.is_a? Integer
+  #     i = 0
+  #     p i.class
+  #     p "oww"
+  #   else
+  #     p "ahh"
+  #     raise if idx.length != 1
+  #     i = idx.flatten.first
+  #     p "#{i.class} #{i}"
+  #   end 
+
+  #   @array[i]  
+  # end
+end
+

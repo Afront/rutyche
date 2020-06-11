@@ -37,6 +37,12 @@ class SomeClass
   def bar(foo, baz)
     foo + baz
   end
+
+  def get_block
+    yield if block.given?
+    
+  end
+
 end
 
 class Stack

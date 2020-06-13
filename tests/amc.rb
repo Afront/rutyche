@@ -113,15 +113,20 @@ module SelfMethods
 
   some_object.foo
   some_object.bar(1,2)
+  some_object.bar(1,2.1)
 
-  begin
-    some_object.bar(1,2.1)  
-  rescue Exception => e
-  else
-    raise 'Should return error'    
-  end
+  stack = Stack.new
+  stack.push 3
+  stack.push 2
 
+  stack.each {|i| p i; p i.class ; i+1}
 
+  # begin
+  #   
+  # rescue Exception => e
+  # else
+  #   raise 'Should return error'    
+  # end
 
   pp checker.calls
 
